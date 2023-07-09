@@ -1,0 +1,391 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <style rel="text/stylesheet">
+        body {
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        #form-container {
+            width: 600px;
+            height: 800px;
+            border: 4px solid black;
+            border-radius: 10px;
+
+            display: flex;
+            flex-direction: column;
+        }
+
+        #form-header {
+            border-bottom: 2px solid black;
+            width: 100%;
+            height: 80px;
+            font-size: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        #question-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+            border-bottom: 1px solid black;
+        }
+
+        #answer-container {
+            width: 100%;
+            height: 515px;
+            border-bottom: 2px solid;
+        }
+
+        #button-container {
+            width: 100%;
+            height: 100px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+        }
+
+        button {
+            width: 120px;
+            height: 40px;
+        }
+
+        .answer {
+            padding-top: 10px;
+            padding-bottom: 10px;
+            padding-left: 10px;
+            cursor: pointer;
+        }
+
+        .answer:hover {
+            background-color: #fdf;
+        }
+
+        #endNoMailContainer {
+            margin: 10px;
+        }
+
+        #endMailContainer {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .endMailRow {
+            height: 50%;
+            display: flex;
+            align-items: center;
+        }
+
+        .submitItemContainer {
+            width: 100%;
+            border-bottom: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <div id="form-container">
+        <div id="form-header">Mockup CS tool</div>
+        <div id="question-container"></div>
+        <div id="answer-container"></div>
+        <div id="button-container">
+            <button id="button-prev" onclick="ButtonPrevAction()">eeby</button>
+            <button id="button-submit" onclick="ButtonSubmitAction()">deeby</button>
+        </div>
+    </div>
+</body>
+<script rel="text/javascript">
+function InitPage() {
+    //Disable both buttons and add correct text.
+    document.getElementById("button-prev").innerText = "← Back";
+    document.getElementById("button-prev").disabled = true;
+    document.getElementById("button-submit").innerText = "Submit";
+    document.getElementById("button-submit").disabled = true;
+
+    //load in starting question
+    LoadBranch("askDeviceType", "question");
+}
+
+function LoadBranch(branchName, type) {
+    switch(type)
+    {
+        case "question":
+            LoadQuestion(branchName);
+            break;
+        case "endNoMail":
+            LoadEndNoMail(branchName);
+            break;
+        case "endMail":
+            LoadEndMail(branchName);
+            break;
+        default:
+            document.getElementById("question-container").innerText = "";
+            document.getElementById("answer-container").innerHTML = "Something went horribly wrong and the JS fucked up...";
+            document.getElementById("button-prev").disabled = true;
+            document.getElementById("button-submit").disabled = true;
+    }
+}
+
+function LoadQuestion(branchName) {
+    document.getElementById("button-submit").disabled = true;
+    let branch = CSTree[branchName];
+    document.getElementById("question-container").innerText = branch.text;
+    let htmlAnswers = "";
+    branch.answers.forEach((a) => {
+        htmlAnswers += `<div class="answer" onclick="PickAnswer('${branchName}','${a.nextBranch}', '${a.type}')">${a.text}</div>`;
+    });
+    document.getElementById("answer-container").innerHTML = htmlAnswers;
+}
+
+function LoadEndNoMail(branchName) {
+    document.getElementById("button-submit").disabled = false;
+    let branch = CSTree[branchName];
+    document.getElementById("question-container").innerText = "";
+    document.getElementById("answer-container").innerHTML = `<div id="endNoMailContainer">${branch.text}</div>`;
+}
+
+function LoadEndMail(branchName) {
+    document.getElementById("button-submit").disabled = false;
+    let branch = CSTree[branchName];
+    document.getElementById("question-container").innerText = "";
+    document.getElementById("answer-container").innerHTML = `<div id="endMailContainer"><div class="endMailRow">${branch.text}</div><div class="endMailRow"><input id="mailInput" value="scrimblo@sigmamail.com"/></div></div>`;
+}
+
+function PickAnswer(q, a, t) {
+    selectedAnswers.push({"question": q, "answer": a});
+    LoadBranch(a, t);
+    document.getElementById("button-prev").disabled = false;
+}
+
+function ButtonPrevAction() {
+    LoadBranch(selectedAnswers.pop(selectedAnswers.length-1).question, "question");
+    if (selectedAnswers.length == 0) {
+    document.getElementById("button-prev").disabled = true;
+    }
+}
+
+function ValidateMailAdress() {
+    return true; //put code to validate e-mail here
+}
+
+function ButtonSubmitAction() {
+    if(document.getElementById("endMailContainer") === null)
+    {
+        SendOverData();
+    }
+    else
+    {
+        let mail = document.getElementById("mailInput").value;
+        if (ValidateMailAdress(mail)) {
+            selectedAnswers.push({"question": "email", "answer": mail});
+            SendOverData();
+        }
+        else {
+            //what to do if mail address is invalid
+        }
+    }
+}
+
+function SendOverData() {
+    let container = document.getElementById("form-container");
+    container.innerHTML = "<div id='form-header'>Data sent to server:</div>";
+
+    selectedAnswers.forEach((a) => {
+        let question = CSTree[a.question].text;
+        let answer = "";
+        if (a.question == "email") {
+            answer = a.answer;
+        }
+
+        else {
+            CSTree[a.question].answers.forEach((ans) => {
+                if (ans.nextBranch == a.answer) {
+                    answer = ans.text;
+                }
+            });
+        }
+
+        container.innerHTML += `<div class='submitItemContainer'></br>Question:</br>${question}</br></br>Answer:</br>${answer}</div>`;
+    });
+
+    if (selectedAnswers[selectedAnswers.length - 1].question == "email") { container.innerHTML += `<div class='submitItemContainer'>Asked user e-mail for further support</div>`; }
+    else { container.innerHTML += `<div class='submitItemContainer'>Issue marked resolved by support tool</div>`; }
+
+    container.innerHTML += "<button onclick='location.reload()'>Reset tool!</button>";
+}
+
+var selectedAnswers = []; //after clicking submit, send this list back to the webserver
+
+const CSTree = { //can be loaded in from a webserver, does not have to be hardcoded in page
+    "askDeviceType": {
+        "text": "What device are you requesting support about?",
+        "answers": [
+            {"text": "My computer", "nextBranch": "computerModel", "type": "question"},
+            {"text": "My toaster", "nextBranch": "issuesToaster", "type": "question"},
+            {"text": "My cat, he is very ill.", "nextBranch": "catVet", "type": "question"},
+            {"text": "My forklift has gained sentience.", "nextBranch": "forkliftSentience", "type": "question"}
+        ]
+    },
+
+    "email": {
+        "text": "Enter e-mail address:"
+    },
+
+    "computerModel": {
+        "text": "What type of computer is it?",
+        "answers": [
+            {"text": "It's a Mac.", "nextBranch": "macNotSupported", "type": "endNoMail"},
+            {"text": "idk but it runs windows", "nextBranch": "switchToLinux", "type": "endNoMail"},
+            {"text": "Lenovo IdeaPad running Arch", "nextBranch": "helpLinux", "type": "endMail"}
+        ]
+    },
+
+    "macNotSupported": {
+        "text": "We do not do Macs here, too bad. Go to the genius bar or smth 💀💀💀"
+    },
+
+    "switchToLinux": {
+        "text": "Switch to Linux and then we can talk."
+    },
+
+    "helpLinux": {
+        "text": "This issue requires further communication. Please enter your e-mail address below:"
+    },
+
+    "issuesToaster": {
+        "text": "What issue are you having with your toaster?",
+        "answers": [
+            {"text": "There is cheese everywhere", "nextBranch": "putLessCheese", "type": "endNoMail"},
+            {"text": "It keeps tripping the breaker", "nextBranch": "ductTapeBreaker", "type": "question"},
+            {"text": "The toaster does not work", "nextBranch": "toasterCap", "type": "endNoMail"}
+        ]
+    },
+
+    "putLessCheese": {
+        "text": "Maybe you should not use half a block of cheese per slice of toasted bread. This is more of a you problem."
+    },
+
+    "toasterCap": {
+        "text": "You be cappin' bro. Everyone knows all toasters toast toast."
+    },
+
+    "ductTapeBreaker": {
+        "text": "Just force your breaker open with duct tape. Did this fix your problem?",
+        "answers": [
+            {"text": "No, it still doesn't work.", "nextBranch": "buyNewToaster", "type": "endNoMail"},
+            {"text": "No, it burned my house down and I lost everything.", "nextBranch": "notCoveredByWarranty", "type": "endNoMail"},
+            {"text": "Yes, it now works at ten times normal speed.", "nextBranch": "toasterFixed", "type": "endNoMail"}
+        ]
+    },
+
+    "buyNewToaster": {
+        "text": "Just buy a new toaster or smth, the old one probably broke down"
+    },
+
+    "notCoveredByWarranty": {
+        "text": "This issue is not covererd by our warranty, because we classify it as water damage. Too bad."
+    },
+
+    "toasterFixed": {
+        "text": "Good that this tool helped you fix your toaster."
+    },
+
+    "catVet": {
+        "text": "Did you bring your cat to the vet?",
+        "answers": [
+            {"text": "Yes, it got some medicine prescribed.", "nextBranch": "catMedicine", "type": "question"},
+            {"text": "Yes, it got fixed by the vet and my cat is now recovering", "nextBranch": "issueAlreadyFixed", "type": "endNoMail"},
+            {"text": "No, WebMD redirected me here", "nextBranch": "takeCatToVet", "type": "endNoMail"},
+            {"text": "No, I prefer alternative medicine", "nextBranch": "catAltMedicine", "type": "question"}
+        ]
+    },
+
+    "catMedicine": {
+        "text": "Then why are you using this support tool?",
+        "answers": [
+            {"text": "My cat is still ill despite his medication", "nextBranch": "notCoveredByWarranty", "type": "endNoMail"},
+            {"text": "The problem got fixed by the vet and now he is recovering", "nextBranch": "issueAlreadyFixed", "type": "endNoMail"},
+            {"text": "I wanted to tell you about my cat Mittens.", "nextBranch": "hiMittens", "type": "endMail"}
+        ]
+    },
+
+    "hiMittens": {
+        "text": "Hi, Mittens! For the user filling the form, please enter your e-mail address below so we can contact you about cat pictures:"
+    },
+
+    "issueAlreadyFixed": {
+        "text": "The issue already appears to be fixed, please leave us alone."
+    },
+
+    "takeCatToVet": {
+        "text": "Just take your cat to the vet, for fuck's sake. WebMD is absolute dogwater."
+    },
+
+    "catAltMedicine": {
+        "text": "What alternative remedies have you already tried?",
+        "answers": [
+            {"text": "I tried to resurrect him after he died, but now he does not have any skin.", "nextBranch": "shadowWizardMoneyGang", "type": "endNoMail"},
+            {"text": "I gave him some lavender oil but now he just smells like lavender", "nextBranch": "notCoveredByWarranty", "type": "endNoMail"},
+            {"text": "teyvat fried egg", "nextBranch": "issueAlreadyFixed", "type": "endNoMail"}
+        ]
+    },
+
+    "shadowWizardMoneyGang": {
+        "text": "Shadow wizard money gang! We love casting spells!"
+    },
+
+    "forkliftSentience": {
+        "text": "Do you know how the forklift has gained sentience?",
+        "answers": [
+            {"text": "Yes, I cast a spell on it to awaken it and give it a mind of its own.", "nextBranch": "shadowWizardMoneyGang", "type": "endNoMail"},
+            {"text": "Yes, it has been posessed by the great old one.", "nextBranch": "notCoveredByWarranty", "type": "endNoMail"},
+            {"text": "Yes, we summoned a succubus and now all she wants to do is get forklift certified", "nextBranch": "forkliftSuccubus", "type": "endNoMail"},
+            {"text": "No.", "nextBranch": "forkliftUnknownSource", "type": "question"}
+        ]
+    },
+
+    "forkliftSuccubus": {
+        "text": "First of all: the forklift hasn't gained sentience, second of all: just let her get her forklift certification."
+    },
+
+    "forkliftUnknownSource": {
+        "text": "Has any of the following things recently occured near the forklift?",
+        "answers": [
+            {"text": "We used an Ouija bourd next to it.", "nextBranch": "ouijaProperEnd", "type": "question"},
+            {"text": "There were orbs on the security footage the night before it happened", "nextBranch": "notCoveredByWarranty", "type": "endNoMail"},
+            {"text": "I really have no clue", "nextBranch": "tooBad", "type": "endNoMail"}
+        ]
+    },
+
+    "tooBad": {
+        "text": "Well, that is too bad, we can't do anything about that."
+    },
+
+    "ouijaProperEnd": {
+        "text": "Did you say goodbye after the Ouija board session?",
+        "answers": [
+            {"text": "Yes, all went fine afterwards", "nextBranch": "issueAlreadyFixed", "type": "endNoMail"},
+            {"text": "No, we forgot.", "nextBranch": "notCoveredByWarranty", "type": "endNoMail"},
+            {"text": "No, we did not say goodbye on purpose.", "nextBranch": "tooBad", "type": "endNoMail"}
+        ]
+    }
+}
+
+window.onload = InitPage;
+</script>
+</html>
